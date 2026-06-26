@@ -75,15 +75,17 @@
     },
     {
       "name": "@actions/core",
+      "version": "^2.0.3",
       "type": "runtime"
     },
     {
       "name": "@actions/github",
+      "version": "^7.0.0",
       "type": "runtime"
     },
     {
       "name": "@octokit/types",
-      "version": "^16",
+      "version": "^12",
       "type": "runtime"
     }
   ],

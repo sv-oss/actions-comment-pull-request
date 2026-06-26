@@ -108,11 +108,26 @@ project.release?.addJobs({
   },
 });
 
-// Pin @octokit/types to the version line shipped by @actions/github@^9.
-// @actions/core@^3 and @actions/github@^9 themselves float at whatever
-// projen-github-action-typescript resolves (currently latest).
+// Pin @actions/core to the latest CJS line (2.x). The 3.x ESM rewrite
+// ships a deep subpath import — `@actions/core/lib/oidc-utils.js` does
+// `import { BearerCredentialHandler } from '@actions/http-client/lib/auth'`
+// without a `.js` extension. Under strict ESM resolution, ncc/webpack
+// 0.44 can't resolve it statically and emits a runtime
+// `eval("require")(...)` fallback, which then crashes at runtime
+// inside the action with MODULE_NOT_FOUND (no node_modules ships
+// alongside dist/index.js). Neither the actions/toolkit team nor ncc
+// have shipped a fix for this; staying on 2.x is the safe option.
+//
+// @actions/github@^7 is the matching last CJS release. We don't use
+// any v3/v9-only API surface — only getInput, setOutput, setFailed,
+// info, debug, context, getOctokit, which are stable since v1.
+project.deps.removeDependency('@actions/core');
+project.deps.removeDependency('@actions/github');
+project.deps.addDependency('@actions/core@^2.0.3', DependencyType.RUNTIME);
+project.deps.addDependency('@actions/github@^7.0.0', DependencyType.RUNTIME);
+// @octokit/types follows the line shipped by @actions/github@^7.
 project.deps.removeDependency('@octokit/types');
-project.deps.addDependency('@octokit/types@^16', DependencyType.RUNTIME);
+project.deps.addDependency('@octokit/types@^12', DependencyType.RUNTIME);
 
 applyTsconfigOverrides(project);
 

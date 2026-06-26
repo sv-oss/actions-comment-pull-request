@@ -235,7 +235,7 @@
       },
       "steps": [
         {
-          "exec": "npx npm-check-updates@20 --upgrade --target=minor --peer --no-deprecated --dep=dev,peer,prod,optional --filter=@vercel/ncc,eslint-import-resolver-typescript,eslint-plugin-import,projen,projen-github-action-typescript,ts-node,typescript,@actions/core,@actions/github"
+          "exec": "npx npm-check-updates@20 --upgrade --target=minor --peer --no-deprecated --dep=dev,peer,prod,optional --filter=@vercel/ncc,eslint-import-resolver-typescript,eslint-plugin-import,projen,projen-github-action-typescript,ts-node,typescript"
         },
         {
           "exec": "npm install"

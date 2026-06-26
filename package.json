@@ -39,9 +39,9 @@
     "vitest": "^3"
   },
   "dependencies": {
-    "@actions/core": "^3.0.1",
-    "@actions/github": "^9.1.1",
-    "@octokit/types": "^16"
+    "@actions/core": "^2.0.3",
+    "@actions/github": "^7.0.0",
+    "@octokit/types": "^12"
   },
   "overrides": {
     "undici": "^6.27.0",
