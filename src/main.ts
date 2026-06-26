@@ -1,13 +1,13 @@
 import fs from 'fs';
-import * as github from '@actions/github';
 import * as core from '@actions/core';
+import * as github from '@actions/github';
 import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
 
 // See https://docs.github.com/en/rest/reactions#reaction-types
 const REACTIONS = ['+1', '-1', 'laugh', 'confused', 'heart', 'hooray', 'rocket', 'eyes'] as const;
 type Reaction = (typeof REACTIONS)[number];
 
-async function run() {
+export async function run() {
   try {
     const message: string = core.getInput('message');
     const filePath: string = core.getInput('file-path');
@@ -38,18 +38,18 @@ async function run() {
       return;
     }
 
-    async function addReactions(commentId: number, reactions: string) {
-      const validReactions = <Reaction[]>reactions
+    async function addReactions(commentId: number, reactionsList: string) {
+      const validReactions = <Reaction[]>reactionsList
         .replace(/\s/g, '')
         .split(',')
         .filter((reaction) => REACTIONS.includes(<Reaction>reaction));
 
       await Promise.allSettled(
-        validReactions.map(async (content) => {
+        validReactions.map(async (reactionContent) => {
           await octokit.rest.reactions.createForIssueComment({
             ...context.repo,
             comment_id: commentId,
-            content,
+            content: reactionContent,
           });
         }),
       );
@@ -58,7 +58,7 @@ async function run() {
     async function createComment({
       owner,
       repo,
-      issueNumber,
+      issueNumber: createIssueNumber,
       body,
     }: {
       owner: string;
@@ -69,7 +69,7 @@ async function run() {
       const { data: comment } = await octokit.rest.issues.createComment({
         owner,
         repo,
-        issue_number: issueNumber,
+        issue_number: createIssueNumber,
         body,
       });
 
@@ -119,7 +119,7 @@ async function run() {
       return comment;
     }
 
-    const commentTagPattern = commentTag ? `<!-- thollander/actions-comment-pull-request "${commentTag}" -->` : null;
+    const commentTagPattern = commentTag ? `<!-- service-victoria/actions-comment-pull-request "${commentTag}" -->` : null;
     const body = commentTagPattern ? `${content}\n${commentTagPattern}` : content;
 
     if (commentTagPattern) {
@@ -131,7 +131,7 @@ async function run() {
         ...context.repo,
         issue_number: issueNumber,
       })) {
-        comment = comments.find((comment) => comment?.body?.includes(commentTagPattern));
+        comment = comments.find((c) => c?.body?.includes(commentTagPattern));
         if (comment) break;
       }
 
@@ -194,4 +194,3 @@ async function run() {
   }
 }
 
-run();

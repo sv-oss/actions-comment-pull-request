@@ -1,5 +1,9 @@
 # Comment Pull Request - GitHub Actions
 
+> **Service Victoria fork.** This is the Service Victoria Platform Engineering maintained fork of [`thollander/actions-comment-pull-request`](https://github.com/thollander/actions-comment-pull-request), upgraded to `node24` and managed with [projen](https://github.com/projen/projen). The upstream action appears to be unmaintained and was about to break with the GitHub Actions `node20` purge.
+>
+> The action behaves identically to upstream **except** that the HTML comment marker used to identify/upsert PR comments has changed from `<!-- thollander/actions-comment-pull-request "tag" -->` to `<!-- service-victoria/actions-comment-pull-request "tag" -->`. Comments created by the upstream action will **not** be matched (upsert/delete/etc.) by this fork. See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md).
+
 ## What is it ?
 
 A GitHub action that comments with a given message the pull request linked to the pushed branch.
@@ -21,7 +25,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Comment PR
-        uses: thollander/actions-comment-pull-request@v3
+        uses: service-victoria/actions-comment-pull-request@v1
         with:
           message: |
             Hello world ! :wave:
@@ -35,7 +39,7 @@ You can either pass an absolute file-path or a relative one that will be by defa
 
 ```yml
 - name: PR comment with file
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v1
   with:
     file-path: /path/to/file.txt
 ```
@@ -48,7 +52,7 @@ It takes only valid reactions and adds it to the comment you've just created. (S
 
 ```yml
 - name: PR comment with reactions
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v1
   with:
     message: |
       Hello world ! :wave:
@@ -63,7 +67,7 @@ That is particularly useful for manual workflow for instance (`workflow_run`).
 ```yml
 ...
 - name: Comment PR
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v1
   with:
     message: |
       Hello world ! :wave:
@@ -83,7 +87,7 @@ _That is particularly interesting while committing multiple times in a PR and th
 ```yml
 ...
 - name: Comment PR with execution number
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v1
   with:
     message: |
       _(execution **${{ github.run_id }}** / attempt **${{ github.run_attempt }}**)_
@@ -100,7 +104,7 @@ Deleting a comment with a specific `comment-tag` is possible with the `mode: del
 ```yml
 ...
 - name: Delete a comment
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v1
   with:
     comment-tag: to_delete
     mode: delete
@@ -115,7 +119,7 @@ This will delete the comment at the end of the job.
 ```yml
 ...
 - name: Write a comment that will be deleted at the end of the job
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v1
   with:
     message: |
       The PR is being built...
@@ -155,7 +159,7 @@ You can get some outputs from this actions :
 
 ```yaml
 - name: Comment PR
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v1
   id: hello
   with:
     message: |
@@ -186,11 +190,18 @@ See [jobs.<job_id>.permissions](https://docs.github.com/en/actions/using-workflo
 
 ## Contributing
 
+This repository is managed with [projen](https://github.com/projen/projen). **Do not edit generated files directly** (`package.json`, `tsconfig.json`, `action.yml`, anything under `.github/workflows/`, `.mergify.yml`, etc.). Instead, edit `.projenrc.ts` and run `npx projen`.
+
 ### Build
 
-The build steps transpiles the `src/main.ts` to `lib/index.js` which is used in a NodeJS environment.
-It is handled by `vercel/ncc` compiler.
+The build (`npx projen build`) compiles `src/index.ts` → `dist/index.js` and `src/cleanup-entry.ts` → `dist/cleanup/index.js` via [`@vercel/ncc`](https://github.com/vercel/ncc). Both bundles are committed so the action can be consumed directly from a git ref.
 
 ```sh
-$ npm run build
+$ npx projen build
+```
+
+### Test
+
+```sh
+$ npx projen test
 ```

@@ -1,7 +1,7 @@
-import * as github from '@actions/github';
 import * as core from '@actions/core';
+import * as github from '@actions/github';
 
-async function run() {
+export async function run() {
   try {
     const githubToken: string = core.getInput('github-token');
     const prNumber: string = core.getInput('pr-number');
@@ -28,7 +28,7 @@ async function run() {
       return;
     }
 
-    const commentTagPattern = `<!-- thollander/actions-comment-pull-request "${commentTag}" -->`;
+    const commentTagPattern = `<!-- service-victoria/actions-comment-pull-request "${commentTag}" -->`;
 
     if (commentTagPattern) {
       for await (const { data: comments } of octokit.paginate.iterator(octokit.rest.issues.listComments, {
@@ -53,4 +53,3 @@ async function run() {
   }
 }
 
-run();
