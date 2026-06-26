@@ -31,10 +31,28 @@ inputs:
     description: A tag on your comment that will be used to identify a comment in case of replacement.
     required: false
   mode:
-    description: Mode that will be used (upsert/recreate/delete/delete-on-completion)
+    description: Mode that will be used (upsert/recreate/outdate/delete/delete-on-completion). `outdate` collapses the previous tagged comment as "marked as outdated" via the GraphQL minimizeComment API instead of deleting it, preserving the audit trail.
     required: false
     default: upsert
   create-if-not-exists:
     description: Whether a comment should be created even if comment-tag is not found.
     required: false
     default: "true"
+  comment-author:
+    description: Restrict the upsert search by `comment-tag` to comments authored by this login (e.g. `github-actions[bot]`). When unset, any comment whose body contains the tag marker is matched — this can cause the action to mutate a human reply that happened to quote the marker. Recommended when the action runs on PRs with active human discussion.
+    required: false
+outputs:
+  id:
+    description: The id of the comment that was created, updated, or matched.
+  body:
+    description: The full body (including the comment-tag marker) of the resolved comment.
+  html-url:
+    description: The HTML URL of the resolved comment.
+  url:
+    description: The REST API URL of the resolved comment.
+  user-login:
+    description: The login of the user/bot that owns the resolved comment.
+  created-at:
+    description: ISO 8601 timestamp of when the comment was originally created.
+  updated-at:
+    description: ISO 8601 timestamp of when the comment was last updated.

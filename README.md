@@ -139,8 +139,9 @@ This will delete the comment at the end of the job.
 | `reactions` | List of reactions for the comment (comma separated). See https://docs.github.com/en/rest/reactions#reaction-types  | | |
 | `pr-number` | The number of the pull request where to create the comment | | current pull-request/issue number (deduced from context) |
 | `comment-tag` | A tag on your comment that will be used to identify a comment in case of replacement | | |
-| `mode` | Mode that will be used to update comment (upsert/recreate/delete/delete-on-completion) | | upsert |
+| `mode` | Mode that will be used to update comment (upsert/recreate/outdate/delete/delete-on-completion). `outdate` collapses the previous tagged comment as "marked as outdated" via the GraphQL `minimizeComment` API and posts a fresh comment — useful when you want to preserve audit history. | | upsert |
 | `create-if-not-exists` | Whether a comment should be created even if `comment-tag` is not found | | true |
+| `comment-author` | Restrict the search by `comment-tag` to comments authored by this login (e.g. `github-actions[bot]`). When unset, any comment whose body contains the tag marker is matched — this can cause the action to mutate a human reply that happened to quote the marker. Recommended on PRs with active human discussion. | | |
 
 
 ## Outputs 
@@ -151,9 +152,13 @@ You can get some outputs from this actions :
 
 | Name | Description |
 | --- | --- |
-| `id` | Comment id that was created or updated | 
-| `body` | Comment body |
-| `html-url` | URL of the comment created or updated |
+| `id` | Comment id that was created, updated, or matched |
+| `body` | Full comment body, including the `comment-tag` marker |
+| `html-url` | HTML URL of the comment |
+| `url` | REST API URL of the comment |
+| `user-login` | Login of the user/bot that owns the comment |
+| `created-at` | ISO 8601 timestamp of when the comment was originally created |
+| `updated-at` | ISO 8601 timestamp of when the comment was last updated |
 
 ### Example output
 
@@ -166,9 +171,13 @@ You can get some outputs from this actions :
       Hello world ! :wave:
 - name: Check outputs
   run: |
-    echo "id : ${{ steps.hello.outputs.id }}"
-    echo "body : ${{ steps.hello.outputs.body }}"
-    echo "html-url : ${{ steps.hello.outputs.html-url }}"
+    echo "id        : ${{ steps.hello.outputs.id }}"
+    echo "body      : ${{ steps.hello.outputs.body }}"
+    echo "html-url  : ${{ steps.hello.outputs.html-url }}"
+    echo "url       : ${{ steps.hello.outputs.url }}"
+    echo "user      : ${{ steps.hello.outputs.user-login }}"
+    echo "created   : ${{ steps.hello.outputs.created-at }}"
+    echo "updated   : ${{ steps.hello.outputs.updated-at }}"
 ```
 
 ## Permissions
