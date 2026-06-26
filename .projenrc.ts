@@ -1,8 +1,25 @@
 import { github, javascript, DependencyType } from 'projen';
+import { MergeMethod } from 'projen/lib/github';
 import { GitHubActionTypeScriptProject, RunsUsing } from 'projen-github-action-typescript';
 
 const project = new GitHubActionTypeScriptProject({
   defaultReleaseBranch: 'main',
+  githubOptions: {
+    mergify: false,
+    mergeQueue: true,
+    mergeQueueOptions: {
+      autoQueue: true,
+      autoQueueOptions: {
+        labels: ['deps-upgrade'],
+        allowedUsernames: ['sv-oss-continuous-delivery[bot]'],
+        projenCredentials: github.GithubCredentials.fromApp({
+          appIdSecret: 'CICD_APP_ID',
+          privateKeySecret: 'CICD_APP_PRIVKEY',
+        }),
+        mergeMethod: MergeMethod.SQUASH,
+      },
+    },
+  },
   devDeps: [
     'projen-github-action-typescript',
     'vitest@^3',
@@ -135,13 +152,6 @@ project.addPackageIgnore('junit.xml');
 
 // Build the project after upgrading so that the compiled JS ends up being committed
 project.tasks.tryFind('post-upgrade')?.spawn(project.buildTask);
-
-// Projen bug: generates deprecated `status-success` condition; override with the correct `check-success`
-// https://docs.mergify.com/configuration/conditions/#attributes-list
-const conditions = ['#approved-reviews-by>=1', '-label~=(do-not-merge)', 'check-success=build'];
-const mergifyFile = project.tryFindObjectFile('.mergify.yml');
-mergifyFile?.addOverride('queue_rules.0.queue_conditions', conditions);
-mergifyFile?.addOverride('pull_request_rules.0.conditions', conditions);
 
 project.release?.addJobs({
   'floating-tags': {
