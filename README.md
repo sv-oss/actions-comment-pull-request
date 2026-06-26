@@ -180,6 +180,70 @@ You can get some outputs from this actions :
     echo "updated   : ${{ steps.hello.outputs.updated-at }}"
 ```
 
+## Tips & gotchas
+
+A few non-obvious things worth knowing before piping arbitrary content into `message:` or `file-path`.
+
+### Body size limit
+
+GitHub caps comment bodies at **65,536 characters**. The action does not truncate — exceeding the limit returns `422 Body is too long`. Easy to hit when piping `terraform plan`, `pytest -v` or build logs. Trim, paginate, or upload as a workflow artefact and link to it instead.
+
+### `recreate` and `outdate` re-notify mentions
+
+`mode: upsert` edits the existing comment in place and does **not** re-send notifications for `@mentions`. `mode: recreate` and `mode: outdate` post a fresh comment, which **does** re-notify everyone mentioned. Prefer `upsert` on long-running PRs to keep the noise down.
+
+### Use `comment-author` on PRs with active discussion
+
+When you set a `comment-tag`, the action's upsert search matches **any** comment whose body contains the tag marker. GitHub's *"Quote reply"* button copies the marker (`<!-- service-victoria/actions-comment-pull-request "tag" -->`) into the human's reply — and the next run will then mutate that human reply instead of the bot's original comment.
+
+Set `comment-author: github-actions[bot]` (or whatever bot owns the token you pass in) to restrict the search and avoid the collision:
+
+```yaml
+- uses: service-victoria/actions-comment-pull-request@v4
+  with:
+    message: ...
+    comment-tag: terraform-plan
+    comment-author: github-actions[bot]
+```
+
+### YAML `|` vs `>` for multi-line messages
+
+Use the literal block scalar `|` (preserves newlines), not the folded scalar `>` (collapses newlines into spaces and destroys markdown formatting):
+
+```yaml
+# ✅ Right
+message: |
+  ## Build report
+  - All checks passed
+
+# ❌ Wrong — renders as a single line
+message: >
+  ## Build report
+  - All checks passed
+```
+
+### Don't interpolate untrusted strings directly
+
+Embedding values like `${{ github.event.pull_request.body }}` straight into `message:` will break YAML parsing if the source contains quotes, backslashes or newlines (and is also a [script-injection vector](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable)). Stage them through `env:` instead:
+
+```yaml
+- env:
+    PR_BODY: ${{ github.event.pull_request.body }}
+  uses: service-victoria/actions-comment-pull-request@v4
+  with:
+    message: |
+      Original description:
+      ${{ env.PR_BODY }}
+```
+
+### Suggested-change blocks don't work in issue comments
+
+Triple-backtick `suggestion` blocks (the ones with the *"Apply suggestion"* button) only render in **PR review comments**, not in issue comments. This action posts issue comments, so a `​```suggestion` block will render as a plain code block with no Apply button — that's a GitHub API limitation, not an action bug. Use a review-comment action if you need that affordance.
+
+### Don't include the marker yourself
+
+The action appends `<!-- service-victoria/actions-comment-pull-request "<tag>" -->` to whatever you put in `message:`. If your message contains the same marker string, the duplicate will confuse the upsert search. Pick a unique `comment-tag` and leave the marker generation to the action.
+
 ## Permissions
 
 Depending on the permissions granted to your token, you may lack some rights. 
