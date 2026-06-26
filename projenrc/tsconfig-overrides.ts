@@ -20,6 +20,14 @@ export function applyTsconfigOverrides(project: GitHubActionTypeScriptProject) {
     'compilerOptions.target': 'ES2022',
     'compilerOptions.lib': ['ES2022'],
     'compilerOptions.noEmit': true,
+    // ncc's TypeScript loader honours these even when `--source-map`
+    // is not passed to ncc itself. Inline maps embed absolute source
+    // paths, which makes dist/ bytes differ between developer machines
+    // and the CI runner and breaks the release task's
+    // `git diff --exit-code` reproducibility guard.
+    'compilerOptions.inlineSourceMap': false,
+    'compilerOptions.inlineSources': false,
+    'compilerOptions.sourceMap': false,
   };
   const testOverrides = {
     'compilerOptions.module': 'CommonJS',
