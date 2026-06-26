@@ -50,4 +50,5 @@ jspm_packages/
 junit.xml
 dist/**/*.d.ts
 !/.github/settings.yml
+!/.github/copilot-instructions.md
 !/.projenrc.ts

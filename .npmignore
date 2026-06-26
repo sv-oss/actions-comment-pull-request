@@ -21,6 +21,7 @@ tsconfig.tsbuildinfo
 /coverage/
 /test-reports/
 junit.xml
+.github/copilot-instructions.md
 /.gitattributes
 /.projenrc.ts
 /projenrc

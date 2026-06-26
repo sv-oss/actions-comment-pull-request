@@ -2,6 +2,7 @@
   "files": [
     ".eslintrc.json",
     ".gitattributes",
+    ".github/copilot-instructions.md",
     ".github/pull_request_template.md",
     ".github/settings.yml",
     ".github/workflows/auto-approve.yml",

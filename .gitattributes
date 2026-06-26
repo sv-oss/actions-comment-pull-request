@@ -3,6 +3,7 @@
 * text=auto eol=lf
 /.eslintrc.json linguist-generated linguist-language=JSON-with-Comments
 /.gitattributes linguist-generated
+/.github/copilot-instructions.md linguist-generated
 /.github/pull_request_template.md linguist-generated
 /.github/settings.yml linguist-generated
 /.github/workflows/auto-approve.yml linguist-generated
