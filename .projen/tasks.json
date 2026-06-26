@@ -148,10 +148,10 @@
       "description": "Creates the distribution package",
       "steps": [
         {
-          "exec": "ncc build --source-map --license licenses.txt src/index.ts -o dist"
+          "exec": "ncc build --license licenses.txt src/index.ts -o dist"
         },
         {
-          "exec": "ncc build --source-map --license licenses.txt src/cleanup-entry.ts -o dist/cleanup"
+          "exec": "ncc build --license licenses.txt src/cleanup-entry.ts -o dist/cleanup"
         }
       ]
     },

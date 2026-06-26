@@ -117,9 +117,14 @@ project.deps.addDependency('@octokit/types@^16', DependencyType.RUNTIME);
 applyTsconfigOverrides(project);
 
 // Since tsc no longer emits lib/, point ncc at the TypeScript sources
-// directly. Two ncc passes — one per Action entrypoint.
-project.packageTask.reset('ncc build --source-map --license licenses.txt src/index.ts -o dist');
-project.packageTask.exec('ncc build --source-map --license licenses.txt src/cleanup-entry.ts -o dist/cleanup');
+// directly. Two ncc passes — one per Action entrypoint. Source maps are
+// intentionally omitted: ncc embeds absolute filesystem paths into the
+// inline sourceMappingURL, which makes locally-built dist/ bytes differ
+// from CI-built dist/ bytes (the release task's
+// `git diff --exit-code` would then fail every time). The Action runtime
+// never consumes the maps, so dropping them costs nothing.
+project.packageTask.reset('ncc build --license licenses.txt src/index.ts -o dist');
+project.packageTask.exec('ncc build --license licenses.txt src/cleanup-entry.ts -o dist/cleanup');
 
 applyDoNotMergeGuard(project);
 addRepoSettings(project);
