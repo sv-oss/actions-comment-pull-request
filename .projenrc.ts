@@ -1,4 +1,4 @@
-import { github, javascript, DependencyType } from 'projen';
+import { github, javascript, DependencyType, TextFile } from 'projen';
 import { MergeMethod } from 'projen/lib/github';
 import { GitHubActionTypeScriptProject } from 'projen-github-action-typescript';
 import { actionMetadata } from './projenrc/action-metadata';
@@ -82,6 +82,13 @@ for (const path of ['/coverage/', '/test-reports/', 'junit.xml']) {
 // ncc emits 0-byte .d.ts shadows next to bundles when fed .ts sources;
 // they aren't needed by the Action runtime.
 project.addGitIgnore('dist/**/*.d.ts');
+// projen's `release` task drops scratch files in dist/ for the release
+// workflow to read (changelog body, version, tag name) and immediately
+// uploads them as workflow artefacts — they're transient and must never
+// be committed alongside the action bundles.
+project.addGitIgnore('dist/changelog.md');
+project.addGitIgnore('dist/releasetag.txt');
+project.addGitIgnore('dist/version.txt');
 
 // Re-run the build after dependency upgrades so the compiled bundles in
 // dist/ end up in the upgrade PR.
@@ -117,5 +124,9 @@ project.packageTask.exec('ncc build --source-map --license licenses.txt src/clea
 applyDoNotMergeGuard(project);
 addRepoSettings(project);
 addAiInstructions(project);
+
+new TextFile(project, '.nvmrc', {
+  lines: [project.minNodeVersion ?? 'lts'],
+});
 
 project.synth();
