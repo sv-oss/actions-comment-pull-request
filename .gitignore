@@ -49,4 +49,5 @@ jspm_packages/
 /test-reports/
 junit.xml
 dist/**/*.d.ts
+!/.github/settings.yml
 !/.projenrc.ts

@@ -1,4 +1,4 @@
-import { github, javascript, DependencyType } from 'projen';
+import { github, javascript, DependencyType, YamlFile } from 'projen';
 import { MergeMethod } from 'projen/lib/github';
 import { GitHubActionTypeScriptProject, RunsUsing } from 'projen-github-action-typescript';
 
@@ -207,5 +207,61 @@ for (const [path, value] of Object.entries(testTsconfigOverrides)) {
 // Since tsc no longer emits lib/, point ncc at the TypeScript sources directly.
 project.packageTask.reset('ncc build --source-map --license licenses.txt src/index.ts -o dist');
 project.packageTask.exec('ncc build --source-map --license licenses.txt src/cleanup-entry.ts -o dist/cleanup');
+
+// Repo settings consumed by https://github.com/apps/settings (probot/settings).
+// The app syncs `.github/settings.yml` to the GitHub API on every push to the
+// default branch. The merge-queue toggle is intentionally omitted here —
+// probot/settings doesn't reliably forward it; flip it via the repo Settings
+// UI (Settings → Branches → main → "Require merge queue") or one-shot `gh api`.
+new YamlFile(project, '.github/settings.yml', {
+  marker: true,
+  obj: {
+    repository: {
+      name: 'actions-comment-pull-request',
+      description: 'GitHub action for commenting on a pull request (Service Victoria fork).',
+      has_issues: true,
+      has_projects: false,
+      has_wiki: false,
+      default_branch: 'main',
+      allow_squash_merge: true,
+      allow_merge_commit: false,
+      allow_rebase_merge: false,
+      delete_branch_on_merge: true,
+    },
+    labels: [
+      {
+        name: 'deps-upgrade',
+        color: '0e8a16',
+        description: 'Dependency upgrade PR eligible for auto-merge',
+      },
+      {
+        name: 'do-not-merge',
+        color: 'b60205',
+        description: 'Block this PR from being merged',
+      },
+    ],
+    branches: [
+      {
+        name: 'main',
+        protection: {
+          required_pull_request_reviews: {
+            required_approving_review_count: 1,
+            dismiss_stale_reviews: true,
+            require_code_owner_reviews: false,
+          },
+          required_status_checks: {
+            strict: true,
+            contexts: ['build'],
+          },
+          enforce_admins: false,
+          required_linear_history: true,
+          allow_force_pushes: false,
+          allow_deletions: false,
+          restrictions: null,
+        },
+      },
+    ],
+  },
+});
 
 project.synth();
