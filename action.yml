@@ -9,7 +9,7 @@ runs:
 author: Service Victoria Platform Engineering
 branding:
   icon: message-circle
-  color: blue
+  color: orange
 inputs:
   message:
     description: Message that should be printed in the pull request

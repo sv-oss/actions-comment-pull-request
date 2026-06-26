@@ -52,7 +52,7 @@ This project's configuration is defined in the .projenrc file at the root of the
 
 This repository is a Service Victoria Platform Engineering maintained fork of `thollander/actions-comment-pull-request`, upgraded to node24.
 
-The project is managed by **projen**. Do NOT edit generated files directly (e.g. `package.json`, `tsconfig.json`, `action.yml`, anything under `.github/workflows/`, `.github/settings.yml`, `dist/`, `.projen/`). Instead, edit `.projenrc.ts` and run `npx projen`.
+The project is managed by **projen**. Do NOT edit generated files directly (e.g. `package.json`, `tsconfig.json`, `action.yml`, anything under `.github/workflows/`, `.github/settings.yml`, `dist/`, `.projen/`). Instead, edit `.projenrc.ts` (or the helpers under `projenrc/`) and run `npx projen`.
 
 Build with `npx projen build` (runs synth, tsc type-check, vitest, eslint, ncc bundle). Test with `npx projen test`. Both `dist/index.js` and `dist/cleanup/index.js` are committed because the Action runtime consumes them directly from a git ref.
 
@@ -63,3 +63,5 @@ When upserting/deleting PR comments, the HTML marker is `<!-- service-victoria/a
 Auto-merge for dependency upgrade PRs uses the native projen merge queue (`.github/workflows/auto-queue.yml`), not Mergify. The branch protection rule on `main` is declared in `.github/settings.yml` and synced by the probot/settings GitHub App.
 
 Tests use **vitest**, not jest. Mock `@actions/core` and `@actions/github` at module level when writing tests. The `run()` function in `src/main.ts` and `src/cleanup.ts` is exported separately from the entry files (`src/index.ts`, `src/cleanup-entry.ts`) so it can be imported without triggering side effects.
+
+Shared values (the CD bot login, deps-upgrade/do-not-merge label names, App-credential secret names) live in `projenrc/constants.ts`. Don't hard-code them anywhere else in projenrc/.
