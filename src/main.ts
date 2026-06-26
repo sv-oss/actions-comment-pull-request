@@ -1,13 +1,13 @@
 import fs from 'fs';
-import * as github from '@actions/github';
 import * as core from '@actions/core';
+import * as github from '@actions/github';
 import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
 
 // See https://docs.github.com/en/rest/reactions#reaction-types
 const REACTIONS = ['+1', '-1', 'laugh', 'confused', 'heart', 'hooray', 'rocket', 'eyes'] as const;
 type Reaction = (typeof REACTIONS)[number];
 
-async function run() {
+export async function run() {
   try {
     const message: string = core.getInput('message');
     const filePath: string = core.getInput('file-path');
@@ -17,6 +17,7 @@ async function run() {
     const reactions: string = core.getInput('reactions');
     const mode: string = core.getInput('mode');
     const createIfNotExists: boolean = core.getInput('create-if-not-exists') === 'true';
+    const commentAuthor: string = core.getInput('comment-author');
 
     if (!message && !filePath && mode !== 'delete') {
       core.setFailed('Either "file-path" or "message" should be provided as input unless running as "delete".');
@@ -38,27 +39,45 @@ async function run() {
       return;
     }
 
-    async function addReactions(commentId: number, reactions: string) {
-      const validReactions = <Reaction[]>reactions
+    async function addReactions(commentId: number, reactionsList: string) {
+      const validReactions = <Reaction[]>reactionsList
         .replace(/\s/g, '')
         .split(',')
         .filter((reaction) => REACTIONS.includes(<Reaction>reaction));
 
       await Promise.allSettled(
-        validReactions.map(async (content) => {
+        validReactions.map(async (reactionContent) => {
           await octokit.rest.reactions.createForIssueComment({
             ...context.repo,
             comment_id: commentId,
-            content,
+            content: reactionContent,
           });
         }),
       );
     }
 
+    function setCommentOutputs(comment: {
+      id: number;
+      body?: string | null | undefined;
+      html_url: string;
+      url: string;
+      user?: { login: string } | null;
+      created_at: string;
+      updated_at: string;
+    }) {
+      core.setOutput('id', comment.id);
+      core.setOutput('body', comment.body);
+      core.setOutput('html-url', comment.html_url);
+      core.setOutput('url', comment.url);
+      core.setOutput('user-login', comment.user?.login ?? '');
+      core.setOutput('created-at', comment.created_at);
+      core.setOutput('updated-at', comment.updated_at);
+    }
+
     async function createComment({
       owner,
       repo,
-      issueNumber,
+      issueNumber: createIssueNumber,
       body,
     }: {
       owner: string;
@@ -69,13 +88,11 @@ async function run() {
       const { data: comment } = await octokit.rest.issues.createComment({
         owner,
         repo,
-        issue_number: issueNumber,
+        issue_number: createIssueNumber,
         body,
       });
 
-      core.setOutput('id', comment.id);
-      core.setOutput('body', comment.body);
-      core.setOutput('html-url', comment.html_url);
+      setCommentOutputs(comment);
 
       await addReactions(comment.id, reactions);
 
@@ -100,9 +117,7 @@ async function run() {
         body,
       });
 
-      core.setOutput('id', comment.id);
-      core.setOutput('body', comment.body);
-      core.setOutput('html-url', comment.html_url);
+      setCommentOutputs(comment);
 
       await addReactions(comment.id, reactions);
 
@@ -119,7 +134,18 @@ async function run() {
       return comment;
     }
 
-    const commentTagPattern = commentTag ? `<!-- thollander/actions-comment-pull-request "${commentTag}" -->` : null;
+    async function minimizeComment(nodeId: string) {
+      await octokit.graphql<{ minimizeComment: { minimizedComment: { isMinimized: boolean } } }>(
+        `mutation($subjectId: ID!) {
+          minimizeComment(input: { subjectId: $subjectId, classifier: OUTDATED }) {
+            minimizedComment { isMinimized }
+          }
+        }`,
+        { subjectId: nodeId },
+      );
+    }
+
+    const commentTagPattern = commentTag ? `<!-- service-victoria/actions-comment-pull-request "${commentTag}" -->` : null;
     const body = commentTagPattern ? `${content}\n${commentTagPattern}` : content;
 
     if (commentTagPattern) {
@@ -131,7 +157,11 @@ async function run() {
         ...context.repo,
         issue_number: issueNumber,
       })) {
-        comment = comments.find((comment) => comment?.body?.includes(commentTagPattern));
+        comment = comments.find((c: ListCommentsResponseDataType[number]) => {
+          if (!c?.body?.includes(commentTagPattern)) return false;
+          if (commentAuthor && c.user?.login !== commentAuthor) return false;
+          return true;
+        });
         if (comment) break;
       }
 
@@ -155,6 +185,14 @@ async function run() {
             body,
           });
           return;
+        } else if (mode === 'outdate') {
+          await minimizeComment(comment.node_id);
+          await createComment({
+            ...context.repo,
+            issueNumber,
+            body,
+          });
+          return;
         } else if (mode === 'delete') {
           await deleteComment({
             ...context.repo,
@@ -165,7 +203,7 @@ async function run() {
           core.debug('Registering this comment to be deleted.');
         } else {
           core.setFailed(
-            `Mode ${mode} is unknown. Please use 'upsert', 'recreate', 'delete' or 'delete-on-completion'.`,
+            `Mode ${mode} is unknown. Please use 'upsert', 'recreate', 'outdate', 'delete' or 'delete-on-completion'.`,
           );
           return;
         }
@@ -194,4 +232,3 @@ async function run() {
   }
 }
 
-run();

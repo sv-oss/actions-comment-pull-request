@@ -1,5 +1,9 @@
 # Comment Pull Request - GitHub Actions
 
+> **Service Victoria fork.** This is the Service Victoria Platform Engineering maintained fork of [`thollander/actions-comment-pull-request`](https://github.com/thollander/actions-comment-pull-request), upgraded to `node24` and managed with [projen](https://github.com/projen/projen). The upstream action appears to be unmaintained and was about to break with the GitHub Actions `node20` purge.
+>
+> The action behaves identically to upstream **except** that the HTML comment marker used to identify/upsert PR comments has changed from `<!-- thollander/actions-comment-pull-request "tag" -->` to `<!-- service-victoria/actions-comment-pull-request "tag" -->`. Comments created by the upstream action will **not** be matched (upsert/delete/etc.) by this fork. See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md).
+
 ## What is it ?
 
 A GitHub action that comments with a given message the pull request linked to the pushed branch.
@@ -21,7 +25,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Comment PR
-        uses: thollander/actions-comment-pull-request@v3
+        uses: service-victoria/actions-comment-pull-request@v4
         with:
           message: |
             Hello world ! :wave:
@@ -35,7 +39,7 @@ You can either pass an absolute file-path or a relative one that will be by defa
 
 ```yml
 - name: PR comment with file
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     file-path: /path/to/file.txt
 ```
@@ -48,7 +52,7 @@ It takes only valid reactions and adds it to the comment you've just created. (S
 
 ```yml
 - name: PR comment with reactions
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     message: |
       Hello world ! :wave:
@@ -63,7 +67,7 @@ That is particularly useful for manual workflow for instance (`workflow_run`).
 ```yml
 ...
 - name: Comment PR
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     message: |
       Hello world ! :wave:
@@ -83,7 +87,7 @@ _That is particularly interesting while committing multiple times in a PR and th
 ```yml
 ...
 - name: Comment PR with execution number
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     message: |
       _(execution **${{ github.run_id }}** / attempt **${{ github.run_attempt }}**)_
@@ -100,7 +104,7 @@ Deleting a comment with a specific `comment-tag` is possible with the `mode: del
 ```yml
 ...
 - name: Delete a comment
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     comment-tag: to_delete
     mode: delete
@@ -115,7 +119,7 @@ This will delete the comment at the end of the job.
 ```yml
 ...
 - name: Write a comment that will be deleted at the end of the job
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     message: |
       The PR is being built...
@@ -135,8 +139,9 @@ This will delete the comment at the end of the job.
 | `reactions` | List of reactions for the comment (comma separated). See https://docs.github.com/en/rest/reactions#reaction-types  | | |
 | `pr-number` | The number of the pull request where to create the comment | | current pull-request/issue number (deduced from context) |
 | `comment-tag` | A tag on your comment that will be used to identify a comment in case of replacement | | |
-| `mode` | Mode that will be used to update comment (upsert/recreate/delete/delete-on-completion) | | upsert |
+| `mode` | Mode that will be used to update comment (upsert/recreate/outdate/delete/delete-on-completion). `outdate` collapses the previous tagged comment as "marked as outdated" via the GraphQL `minimizeComment` API and posts a fresh comment — useful when you want to preserve audit history. | | upsert |
 | `create-if-not-exists` | Whether a comment should be created even if `comment-tag` is not found | | true |
+| `comment-author` | Restrict the search by `comment-tag` to comments authored by this login (e.g. `github-actions[bot]`). When unset, any comment whose body contains the tag marker is matched — this can cause the action to mutate a human reply that happened to quote the marker. Recommended on PRs with active human discussion. | | |
 
 
 ## Outputs 
@@ -147,25 +152,97 @@ You can get some outputs from this actions :
 
 | Name | Description |
 | --- | --- |
-| `id` | Comment id that was created or updated | 
-| `body` | Comment body |
-| `html-url` | URL of the comment created or updated |
+| `id` | Comment id that was created, updated, or matched |
+| `body` | Full comment body, including the `comment-tag` marker |
+| `html-url` | HTML URL of the comment |
+| `url` | REST API URL of the comment |
+| `user-login` | Login of the user/bot that owns the comment |
+| `created-at` | ISO 8601 timestamp of when the comment was originally created |
+| `updated-at` | ISO 8601 timestamp of when the comment was last updated |
 
 ### Example output
 
 ```yaml
 - name: Comment PR
-  uses: thollander/actions-comment-pull-request@v3
+  uses: service-victoria/actions-comment-pull-request@v4
   id: hello
   with:
     message: |
       Hello world ! :wave:
 - name: Check outputs
   run: |
-    echo "id : ${{ steps.hello.outputs.id }}"
-    echo "body : ${{ steps.hello.outputs.body }}"
-    echo "html-url : ${{ steps.hello.outputs.html-url }}"
+    echo "id        : ${{ steps.hello.outputs.id }}"
+    echo "body      : ${{ steps.hello.outputs.body }}"
+    echo "html-url  : ${{ steps.hello.outputs.html-url }}"
+    echo "url       : ${{ steps.hello.outputs.url }}"
+    echo "user      : ${{ steps.hello.outputs.user-login }}"
+    echo "created   : ${{ steps.hello.outputs.created-at }}"
+    echo "updated   : ${{ steps.hello.outputs.updated-at }}"
 ```
+
+## Tips & gotchas
+
+A few non-obvious things worth knowing before piping arbitrary content into `message:` or `file-path`.
+
+### Body size limit
+
+GitHub caps comment bodies at **65,536 characters**. The action does not truncate — exceeding the limit returns `422 Body is too long`. Easy to hit when piping `terraform plan`, `pytest -v` or build logs. Trim, paginate, or upload as a workflow artefact and link to it instead.
+
+### `recreate` and `outdate` re-notify mentions
+
+`mode: upsert` edits the existing comment in place and does **not** re-send notifications for `@mentions`. `mode: recreate` and `mode: outdate` post a fresh comment, which **does** re-notify everyone mentioned. Prefer `upsert` on long-running PRs to keep the noise down.
+
+### Use `comment-author` on PRs with active discussion
+
+When you set a `comment-tag`, the action's upsert search matches **any** comment whose body contains the tag marker. GitHub's *"Quote reply"* button copies the marker (`<!-- service-victoria/actions-comment-pull-request "tag" -->`) into the human's reply — and the next run will then mutate that human reply instead of the bot's original comment.
+
+Set `comment-author: github-actions[bot]` (or whatever bot owns the token you pass in) to restrict the search and avoid the collision:
+
+```yaml
+- uses: service-victoria/actions-comment-pull-request@v4
+  with:
+    message: ...
+    comment-tag: terraform-plan
+    comment-author: github-actions[bot]
+```
+
+### YAML `|` vs `>` for multi-line messages
+
+Use the literal block scalar `|` (preserves newlines), not the folded scalar `>` (collapses newlines into spaces and destroys markdown formatting):
+
+```yaml
+# ✅ Right
+message: |
+  ## Build report
+  - All checks passed
+
+# ❌ Wrong — renders as a single line
+message: >
+  ## Build report
+  - All checks passed
+```
+
+### Don't interpolate untrusted strings directly
+
+Embedding values like `${{ github.event.pull_request.body }}` straight into `message:` will break YAML parsing if the source contains quotes, backslashes or newlines (and is also a [script-injection vector](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable)). Stage them through `env:` instead:
+
+```yaml
+- env:
+    PR_BODY: ${{ github.event.pull_request.body }}
+  uses: service-victoria/actions-comment-pull-request@v4
+  with:
+    message: |
+      Original description:
+      ${{ env.PR_BODY }}
+```
+
+### Suggested-change blocks don't work in issue comments
+
+Triple-backtick `suggestion` blocks (the ones with the *"Apply suggestion"* button) only render in **PR review comments**, not in issue comments. This action posts issue comments, so a `​```suggestion` block will render as a plain code block with no Apply button — that's a GitHub API limitation, not an action bug. Use a review-comment action if you need that affordance.
+
+### Don't include the marker yourself
+
+The action appends `<!-- service-victoria/actions-comment-pull-request "<tag>" -->` to whatever you put in `message:`. If your message contains the same marker string, the duplicate will confuse the upsert search. Pick a unique `comment-tag` and leave the marker generation to the action.
 
 ## Permissions
 
@@ -186,11 +263,18 @@ See [jobs.<job_id>.permissions](https://docs.github.com/en/actions/using-workflo
 
 ## Contributing
 
+This repository is managed with [projen](https://github.com/projen/projen). **Do not edit generated files directly** (`package.json`, `tsconfig.json`, `action.yml`, anything under `.github/workflows/`, `.mergify.yml`, etc.). Instead, edit `.projenrc.ts` and run `npx projen`.
+
 ### Build
 
-The build steps transpiles the `src/main.ts` to `lib/index.js` which is used in a NodeJS environment.
-It is handled by `vercel/ncc` compiler.
+The build (`npx projen build`) compiles `src/index.ts` → `dist/index.js` and `src/cleanup-entry.ts` → `dist/cleanup/index.js` via [`@vercel/ncc`](https://github.com/vercel/ncc). Both bundles are committed so the action can be consumed directly from a git ref.
 
 ```sh
-$ npm run build
+$ npx projen build
+```
+
+### Test
+
+```sh
+$ npx projen test
 ```

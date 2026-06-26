@@ -1,12 +1,14 @@
-import * as github from '@actions/github';
 import * as core from '@actions/core';
+import * as github from '@actions/github';
+import type { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
 
-async function run() {
+export async function run() {
   try {
     const githubToken: string = core.getInput('github-token');
     const prNumber: string = core.getInput('pr-number');
     const commentTag: string = core.getInput('comment-tag');
     const mode: string = core.getInput('mode');
+    const commentAuthor: string = core.getInput('comment-author');
 
     if (mode !== 'delete-on-completion') {
       core.debug('This comment was not to be deleted on completion. Skipping');
@@ -28,14 +30,21 @@ async function run() {
       return;
     }
 
-    const commentTagPattern = `<!-- thollander/actions-comment-pull-request "${commentTag}" -->`;
+    const commentTagPattern = `<!-- service-victoria/actions-comment-pull-request "${commentTag}" -->`;
 
     if (commentTagPattern) {
+      type ListCommentsResponseDataType = GetResponseDataTypeFromEndpointMethod<
+        typeof octokit.rest.issues.listComments
+      >;
       for await (const { data: comments } of octokit.paginate.iterator(octokit.rest.issues.listComments, {
         ...context.repo,
         issue_number: issueNumber,
       })) {
-        const commentsToDelete = comments.filter((comment) => comment?.body?.includes(commentTagPattern));
+        const commentsToDelete = comments.filter((comment: ListCommentsResponseDataType[number]) => {
+          if (!comment?.body?.includes(commentTagPattern)) return false;
+          if (commentAuthor && comment.user?.login !== commentAuthor) return false;
+          return true;
+        });
         for (const commentToDelete of commentsToDelete) {
           core.info(`Deleting comment ${commentToDelete.id}.`);
           await octokit.rest.issues.deleteComment({
@@ -53,4 +62,3 @@ async function run() {
   }
 }
 
-run();
