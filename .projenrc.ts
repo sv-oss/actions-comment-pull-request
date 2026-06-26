@@ -47,7 +47,7 @@ const project = new GitHubActionTypeScriptProject({
     ],
   },
   dependabot: false,
-  minMajorVersion: 1,
+  minMajorVersion: 4,
   license: 'MIT',
   copyrightOwner: 'Service Victoria',
   actionMetadata: {
@@ -207,6 +207,21 @@ for (const [path, value] of Object.entries(testTsconfigOverrides)) {
 // Since tsc no longer emits lib/, point ncc at the TypeScript sources directly.
 project.packageTask.reset('ncc build --source-map --license licenses.txt src/index.ts -o dist');
 project.packageTask.exec('ncc build --source-map --license licenses.txt src/cleanup-entry.ts -o dist/cleanup');
+
+// Honour the `do-not-merge` label on auto-approve + auto-queue workflows.
+// projen's AutoApproveOptions / AutoQueueOptions don't expose an exclusion
+// label, so override the generated `if:` conditions directly. The new
+// condition keeps the existing deps-upgrade + bot-author checks AND
+// excludes any PR carrying the `do-not-merge` label.
+const doNotMergeGuard = "!contains(github.event.pull_request.labels.*.name, 'do-not-merge')";
+const autoApproveIf = "contains(github.event.pull_request.labels.*.name, 'deps-upgrade')"
+  + " && (github.event.pull_request.user.login == 'sv-oss-continuous-delivery[bot]')"
+  + ` && ${doNotMergeGuard}`;
+const autoQueueIf = "(contains(github.event.pull_request.labels.*.name, 'deps-upgrade'))"
+  + " && (github.event.pull_request.user.login == 'sv-oss-continuous-delivery[bot]')"
+  + ` && ${doNotMergeGuard}`;
+project.tryFindObjectFile('.github/workflows/auto-approve.yml')?.addOverride('jobs.approve.if', autoApproveIf);
+project.tryFindObjectFile('.github/workflows/auto-queue.yml')?.addOverride('jobs.enableAutoQueue.if', autoQueueIf);
 
 // Repo settings consumed by https://github.com/apps/settings (probot/settings).
 // The app syncs `.github/settings.yml` to the GitHub API on every push to the

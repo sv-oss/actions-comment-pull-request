@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Comment PR
-        uses: service-victoria/actions-comment-pull-request@v1
+        uses: service-victoria/actions-comment-pull-request@v4
         with:
           message: |
             Hello world ! :wave:
@@ -39,7 +39,7 @@ You can either pass an absolute file-path or a relative one that will be by defa
 
 ```yml
 - name: PR comment with file
-  uses: service-victoria/actions-comment-pull-request@v1
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     file-path: /path/to/file.txt
 ```
@@ -52,7 +52,7 @@ It takes only valid reactions and adds it to the comment you've just created. (S
 
 ```yml
 - name: PR comment with reactions
-  uses: service-victoria/actions-comment-pull-request@v1
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     message: |
       Hello world ! :wave:
@@ -67,7 +67,7 @@ That is particularly useful for manual workflow for instance (`workflow_run`).
 ```yml
 ...
 - name: Comment PR
-  uses: service-victoria/actions-comment-pull-request@v1
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     message: |
       Hello world ! :wave:
@@ -87,7 +87,7 @@ _That is particularly interesting while committing multiple times in a PR and th
 ```yml
 ...
 - name: Comment PR with execution number
-  uses: service-victoria/actions-comment-pull-request@v1
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     message: |
       _(execution **${{ github.run_id }}** / attempt **${{ github.run_attempt }}**)_
@@ -104,7 +104,7 @@ Deleting a comment with a specific `comment-tag` is possible with the `mode: del
 ```yml
 ...
 - name: Delete a comment
-  uses: service-victoria/actions-comment-pull-request@v1
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     comment-tag: to_delete
     mode: delete
@@ -119,7 +119,7 @@ This will delete the comment at the end of the job.
 ```yml
 ...
 - name: Write a comment that will be deleted at the end of the job
-  uses: service-victoria/actions-comment-pull-request@v1
+  uses: service-victoria/actions-comment-pull-request@v4
   with:
     message: |
       The PR is being built...
@@ -159,7 +159,7 @@ You can get some outputs from this actions :
 
 ```yaml
 - name: Comment PR
-  uses: service-victoria/actions-comment-pull-request@v1
+  uses: service-victoria/actions-comment-pull-request@v4
   id: hello
   with:
     message: |

@@ -1,6 +1,6 @@
 # Migration guide
 
-## From `thollander/actions-comment-pull-request@v3` to `service-victoria/actions-comment-pull-request@v1`
+## From `thollander/actions-comment-pull-request@v3` to `service-victoria/actions-comment-pull-request@v4`
 
 Drop-in compatible **except** for one behavioural change:
 
@@ -26,7 +26,7 @@ uses: thollander/actions-comment-pull-request@v3
 with:
 
 ```yaml
-uses: service-victoria/actions-comment-pull-request@v1
+uses: service-victoria/actions-comment-pull-request@v4
 ```
 
 ### Runtime
