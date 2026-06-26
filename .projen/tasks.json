@@ -148,10 +148,10 @@
       "description": "Creates the distribution package",
       "steps": [
         {
-          "exec": "ncc build --source-map --license licenses.txt"
+          "exec": "ncc build --source-map --license licenses.txt src/index.ts -o dist"
         },
         {
-          "exec": "ncc build --source-map --license licenses.txt lib/cleanup-entry.js -o dist/cleanup"
+          "exec": "ncc build --source-map --license licenses.txt src/cleanup-entry.ts -o dist/cleanup"
         }
       ]
     },
@@ -235,7 +235,7 @@
       },
       "steps": [
         {
-          "exec": "npx npm-check-updates@20 --upgrade --target=minor --peer --no-deprecated --dep=dev,peer,prod,optional --filter=@vercel/ncc,eslint-import-resolver-typescript,eslint-plugin-import,projen,projen-github-action-typescript,ts-node,typescript"
+          "exec": "npx npm-check-updates@20 --upgrade --target=minor --peer --no-deprecated --dep=dev,peer,prod,optional --filter=@vercel/ncc,eslint-import-resolver-typescript,eslint-plugin-import,projen,projen-github-action-typescript,ts-node,typescript,@actions/core,@actions/github"
         },
         {
           "exec": "npm install"

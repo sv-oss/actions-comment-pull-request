@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import type { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
 
 export async function run() {
   try {
@@ -31,11 +32,16 @@ export async function run() {
     const commentTagPattern = `<!-- service-victoria/actions-comment-pull-request "${commentTag}" -->`;
 
     if (commentTagPattern) {
+      type ListCommentsResponseDataType = GetResponseDataTypeFromEndpointMethod<
+        typeof octokit.rest.issues.listComments
+      >;
       for await (const { data: comments } of octokit.paginate.iterator(octokit.rest.issues.listComments, {
         ...context.repo,
         issue_number: issueNumber,
       })) {
-        const commentsToDelete = comments.filter((comment) => comment?.body?.includes(commentTagPattern));
+        const commentsToDelete = comments.filter((comment: ListCommentsResponseDataType[number]) =>
+          comment?.body?.includes(commentTagPattern),
+        );
         for (const commentToDelete of commentsToDelete) {
           core.info(`Deleting comment ${commentToDelete.id}.`);
           await octokit.rest.issues.deleteComment({

@@ -25,9 +25,7 @@ const project = new GitHubActionTypeScriptProject({
     'vitest@^3',
     '@vitest/coverage-v8@^3',
   ],
-  deps: [
-    '@octokit/types@^13',
-  ],
+  deps: [],
   name: 'actions-comment-pull-request',
   description: 'GitHub action for commenting on a pull request (Service Victoria maintained fork of thollander/actions-comment-pull-request).',
   packageManager: javascript.NodePackageManager.NPM,
@@ -123,10 +121,8 @@ project.package.addField('overrides', {
   '@actions/http-client': '^2.2.3',
 });
 
-// The packageTask defaults to bundling the action's `main` entry. We have a
-// second entry (`cleanup-entry`) that powers the `post:` step, so build it
-// after the main package step finishes.
-project.packageTask.exec('ncc build --source-map --license licenses.txt lib/cleanup-entry.js -o dist/cleanup');
+// The packageTask is fully reset below in the deps-upgrade block to point
+// ncc directly at the TypeScript sources, so nothing extra is wired here.
 
 // Configure vitest as the test runner
 const testTask = project.tasks.tryFind('test')!;
@@ -143,6 +139,9 @@ if (eslintTask) {
 project.addGitIgnore('/coverage/');
 project.addGitIgnore('/test-reports/');
 project.addGitIgnore('junit.xml');
+// ncc emits .d.ts shadows next to bundles when fed .ts sources; they are
+// not needed by the Action runtime, so keep them out of git.
+project.addGitIgnore('dist/**/*.d.ts');
 
 // Ensure test/coverage artifacts are never published to npm even if they
 // happen to be present in the working tree at pack/publish time.
@@ -167,11 +166,46 @@ project.release?.addJobs({
   },
 });
 
-// Pin @actions/* deps to versions known compatible with the existing source.
-// projen-github-action-typescript adds these as `*`; replace with explicit caret ranges.
-project.deps.removeDependency('@actions/core');
-project.deps.removeDependency('@actions/github');
-project.deps.addDependency('@actions/core@^1.11.1', DependencyType.RUNTIME);
-project.deps.addDependency('@actions/github@^6.0.0', DependencyType.RUNTIME);
+// Pin @octokit/types to the version line shipped by @actions/github@^9.
+// @actions/core@^3 and @actions/github@^9 themselves float at whatever
+// projen-github-action-typescript resolves (currently latest).
+project.deps.removeDependency('@octokit/types');
+project.deps.addDependency('@octokit/types@^16', DependencyType.RUNTIME);
+
+// @actions/core@>=2 and @actions/github@>=8 are ESM-only and ship their
+// types via package `exports` subpaths (e.g. `@octokit/core/types`). Use
+// `Bundler` module resolution (TS 5.0+) so the source can `import` from
+// ESM-only packages without TS rewriting to `require()` calls. We rely on
+// ncc to do the final CJS bundling for the Action runtime, so tsc just
+// type-checks.
+const productionTsconfigOverrides = {
+  'compilerOptions.module': 'ESNext',
+  'compilerOptions.moduleResolution': 'Bundler',
+  'compilerOptions.target': 'ES2022',
+  'compilerOptions.lib': ['ES2022'],
+  'compilerOptions.noEmit': true,
+};
+for (const [path, value] of Object.entries(productionTsconfigOverrides)) {
+  project.tryFindObjectFile('tsconfig.json')?.addOverride(path, value);
+}
+
+// test/tsconfig.json is what ts-node uses to execute .projenrc.ts. Keep it
+// on a CommonJS-compatible module/resolution so ts-node loads it as CJS
+// (ESM ts-node would need a custom loader flag we don't want to wire).
+// We still pin target/lib/moduleResolution wide enough to satisfy the
+// modern @octokit/* type-resolution needs.
+const testTsconfigOverrides = {
+  'compilerOptions.module': 'CommonJS',
+  'compilerOptions.moduleResolution': 'Bundler',
+  'compilerOptions.target': 'ES2022',
+  'compilerOptions.lib': ['ES2022'],
+};
+for (const [path, value] of Object.entries(testTsconfigOverrides)) {
+  project.tryFindObjectFile('test/tsconfig.json')?.addOverride(path, value);
+}
+
+// Since tsc no longer emits lib/, point ncc at the TypeScript sources directly.
+project.packageTask.reset('ncc build --source-map --license licenses.txt src/index.ts -o dist');
+project.packageTask.exec('ncc build --source-map --license licenses.txt src/cleanup-entry.ts -o dist/cleanup');
 
 project.synth();

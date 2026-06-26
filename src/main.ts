@@ -131,7 +131,7 @@ export async function run() {
         ...context.repo,
         issue_number: issueNumber,
       })) {
-        comment = comments.find((c) => c?.body?.includes(commentTagPattern));
+        comment = comments.find((c: ListCommentsResponseDataType[number]) => c?.body?.includes(commentTagPattern));
         if (comment) break;
       }
 
