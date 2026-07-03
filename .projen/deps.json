@@ -21,12 +21,8 @@
       "type": "build"
     },
     {
-      "name": "@vercel/ncc",
-      "type": "build"
-    },
-    {
       "name": "@vitest/coverage-v8",
-      "version": "^3",
+      "version": "^4",
       "type": "build"
     },
     {
@@ -65,27 +61,31 @@
       "type": "build"
     },
     {
+      "name": "tsup",
+      "type": "build"
+    },
+    {
       "name": "typescript",
       "type": "build"
     },
     {
       "name": "vitest",
-      "version": "^3",
+      "version": "^4",
       "type": "build"
     },
     {
       "name": "@actions/core",
-      "version": "^2.0.3",
+      "version": "^3.0.0",
       "type": "runtime"
     },
     {
       "name": "@actions/github",
-      "version": "^7.0.0",
+      "version": "^9.0.0",
       "type": "runtime"
     },
     {
       "name": "@octokit/types",
-      "version": "^12",
+      "version": "^16",
       "type": "runtime"
     }
   ],

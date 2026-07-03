@@ -54,9 +54,9 @@ This repository is a Service Victoria Platform Engineering maintained fork of `t
 
 The project is managed by **projen**. Do NOT edit generated files directly (e.g. `package.json`, `tsconfig.json`, `action.yml`, anything under `.github/workflows/`, `.github/settings.yml`, `dist/`, `.projen/`). Instead, edit `.projenrc.ts` (or the helpers under `projenrc/`) and run `npx projen`.
 
-Build with `npx projen build` (runs synth, tsc type-check, vitest, eslint, ncc bundle). Test with `npx projen test`. Both `dist/index.js` and `dist/cleanup/index.js` are committed because the Action runtime consumes them directly from a git ref.
+Build with `npx projen build` (runs synth, tsc type-check, vitest, eslint, tsup bundle). Test with `npx projen test`. Both `dist/index.js` and `dist/cleanup/index.js` are committed because the Action runtime consumes them directly from a git ref.
 
-TypeScript is configured with `module: ESNext` + `moduleResolution: Bundler` + `noEmit: true` for the production sources, because `@actions/core@^3` and `@actions/github@^9` are ESM-only. `tsc` only type-checks; `ncc` bundles `src/index.ts` and `src/cleanup-entry.ts` directly to CJS.
+TypeScript is configured with `module: ESNext` + `moduleResolution: Bundler` + `noEmit: true` for the production sources, because `@actions/core@^3` and `@actions/github@^9` are ESM-only. `tsc` only type-checks; `tsup` (esbuild) bundles `src/index.ts` and `src/cleanup-entry.ts` directly to CJS (config in `tsup.config.ts`).
 
 When upserting/deleting PR comments, the HTML marker is `<!-- service-victoria/actions-comment-pull-request "tag" -->`. The old upstream marker (`thollander/...`) is intentionally NOT matched — this is a deliberate clean break.
 

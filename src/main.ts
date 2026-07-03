@@ -1,7 +1,7 @@
-import fs from 'fs';
+import fs from 'node:fs';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
+import type { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
 
 // See https://docs.github.com/en/rest/reactions#reaction-types
 const REACTIONS = ['+1', '-1', 'laugh', 'confused', 'heart', 'hooray', 'rocket', 'eyes'] as const;
@@ -135,14 +135,27 @@ export async function run() {
     }
 
     async function minimizeComment(nodeId: string) {
-      await octokit.graphql<{ minimizeComment: { minimizedComment: { isMinimized: boolean } } }>(
-        `mutation($subjectId: ID!) {
-          minimizeComment(input: { subjectId: $subjectId, classifier: OUTDATED }) {
-            minimizedComment { isMinimized }
-          }
-        }`,
-        { subjectId: nodeId },
-      );
+      try {
+        await octokit.graphql<{ minimizeComment: { minimizedComment: { isMinimized: boolean } } }>(
+          `mutation($subjectId: ID!) {
+            minimizeComment(input: { subjectId: $subjectId, classifier: OUTDATED }) {
+              minimizedComment { isMinimized }
+            }
+          }`,
+          { subjectId: nodeId },
+        );
+      } catch (error) {
+        // The REST list endpoint doesn't expose `isMinimized`, so we can't tell
+        // up front which matches are already collapsed. GitHub rejects
+        // re-minimizing an already-minimized comment; treat that as a no-op so
+        // outdate stays idempotent across reruns.
+        const minimizeError = error instanceof Error ? error.message : String(error);
+        if (/already.*minimized|MINIMIZED_ALREADY/i.test(minimizeError)) {
+          core.debug(`Comment ${nodeId} is already minimized; skipping.`);
+          return;
+        }
+        throw error;
+      }
     }
 
     const commentTagPattern = commentTag ? `<!-- service-victoria/actions-comment-pull-request "${commentTag}" -->` : null;
@@ -152,18 +165,18 @@ export async function run() {
       type ListCommentsResponseDataType = GetResponseDataTypeFromEndpointMethod<
         typeof octokit.rest.issues.listComments
       >;
-      let comment: ListCommentsResponseDataType[0] | undefined;
+      const matchingComments: ListCommentsResponseDataType = [];
       for await (const { data: comments } of octokit.paginate.iterator(octokit.rest.issues.listComments, {
         ...context.repo,
         issue_number: issueNumber,
       })) {
-        comment = comments.find((c: ListCommentsResponseDataType[number]) => {
-          if (!c?.body?.includes(commentTagPattern)) return false;
-          if (commentAuthor && c.user?.login !== commentAuthor) return false;
-          return true;
-        });
-        if (comment) break;
+        for (const c of comments as ListCommentsResponseDataType) {
+          if (!c?.body?.includes(commentTagPattern)) continue;
+          if (commentAuthor && c.user?.login !== commentAuthor) continue;
+          matchingComments.push(c);
+        }
       }
+      const comment = matchingComments[0];
 
       if (comment) {
         if (mode === 'upsert') {
@@ -186,7 +199,12 @@ export async function run() {
           });
           return;
         } else if (mode === 'outdate') {
-          await minimizeComment(comment.node_id);
+          // Collapse every previously-posted comment carrying this tag, not
+          // just the first match, so a backlog of active comments (e.g. one per
+          // push) all get marked outdated instead of only the oldest.
+          for (const previous of matchingComments) {
+            await minimizeComment(previous.node_id);
+          }
           await createComment({
             ...context.repo,
             issueNumber,

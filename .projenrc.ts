@@ -1,12 +1,14 @@
 import { github, javascript, DependencyType, TextFile } from 'projen';
 import { MergeMethod } from 'projen/lib/github';
+import { UpgradeDependenciesSchedule } from 'projen/lib/javascript';
 import { GitHubActionTypeScriptProject } from 'projen-github-action-typescript';
 import { actionMetadata } from './projenrc/action-metadata';
-import { addAiInstructions } from './projenrc/ai-instructions';
+import { AiAssistantInstructions } from './projenrc/ai-instructions';
 import { BOT_LOGIN, DEPS_UPGRADE_LABEL, ciAppCredentials } from './projenrc/constants';
-import { applyDoNotMergeGuard } from './projenrc/do-not-merge-guard';
-import { addRepoSettings } from './projenrc/repo-settings';
-import { applyTsconfigOverrides } from './projenrc/tsconfig-overrides';
+import { DoNotMergeGuard } from './projenrc/do-not-merge-guard';
+import { RepoSettings } from './projenrc/repo-settings';
+import { TsconfigOverrides } from './projenrc/tsconfig-overrides';
+import { Vitest } from './projenrc/vitest';
 
 const project = new GitHubActionTypeScriptProject({
   defaultReleaseBranch: 'main',
@@ -23,8 +25,7 @@ const project = new GitHubActionTypeScriptProject({
   deps: [],
   devDeps: [
     'projen-github-action-typescript',
-    'vitest@^3',
-    '@vitest/coverage-v8@^3',
+    'tsup',
   ],
   githubOptions: {
     mergify: false,
@@ -44,7 +45,12 @@ const project = new GitHubActionTypeScriptProject({
     allowedUsernames: [BOT_LOGIN],
   },
   depsUpgradeOptions: {
+    // Don't upgrade to versions that are <7 days old.
+    // Should prevent us being hit by the worst of
+    // supply chain attacks
+    cooldown: 7,
     workflowOptions: {
+      schedule: UpgradeDependenciesSchedule.expressions(['0 0 1,15 * *']),
       projenCredentials: ciAppCredentials(),
       labels: [DEPS_UPGRADE_LABEL],
     },
@@ -56,32 +62,30 @@ const project = new GitHubActionTypeScriptProject({
 });
 
 // Constrain minimum versions of transitive dependencies with known
-// advisories that don't yet have upstream fixes available via direct
-// package upgrades. Caret ranges, not exact pins, so patch/minor updates
-// with the fixes get picked up automatically.
+// advisories. Caret ranges, not exact pins, so patch/minor updates with
+// the fixes get picked up automatically.
+//
+// @actions/http-client is deliberately absent: @actions/core@3 needs `^4`
+// (which has an `exports` map, so esbuild can statically resolve core's
+// extensionless `@actions/http-client/lib/auth` import) while
+// @actions/github@9 needs `^3`. Overriding to a single version collapses
+// core onto the `^3` line, which has no `exports` map and forces esbuild
+// into an `eval("require")` runtime fallback that crashes the bundled
+// action. npm's natural resolution (separate copies) keeps both happy.
 project.package.addField('overrides', {
   'undici': '^6.27.0',
   'fast-xml-parser': '^5.9.3',
   'fast-xml-builder': '^1.2.0',
   'js-yaml': '^4.2.0',
-  '@actions/http-client': '^2.2.3',
+  // tsup/vite pin esbuild to `^0.27`, which carries a dev-server advisory
+  // (GHSA-g7r4-m6w7-qqqr). We never run `esbuild serve`, but bumping the
+  // shared copy to a patched line keeps `npm audit` clean.
+  'esbuild': '^0.28.1',
 });
 
 // Wire vitest as the test runner in place of jest.
-const testTask = project.tasks.tryFind('test')!;
-testTask.reset('vitest run --coverage --passWithNoTests', { receiveArgs: true });
-project.tasks.tryFind('test:watch')?.reset('vitest', { receiveArgs: true });
-const eslintTask = project.tasks.tryFind('eslint');
-if (eslintTask) testTask.spawn(eslintTask);
+new Vitest(project);
 
-// Test/coverage artefacts: ignore in git AND keep out of the npm tarball.
-for (const path of ['/coverage/', '/test-reports/', 'junit.xml']) {
-  project.addGitIgnore(path);
-  project.addPackageIgnore(path);
-}
-// ncc emits 0-byte .d.ts shadows next to bundles when fed .ts sources;
-// they aren't needed by the Action runtime.
-project.addGitIgnore('dist/**/*.d.ts');
 // projen's `release` task drops scratch files in dist/ for the release
 // workflow to read (changelog body, version, tag name) and immediately
 // uploads them as workflow artefacts — they're transient and must never
@@ -108,42 +112,33 @@ project.release?.addJobs({
   },
 });
 
-// Pin @actions/core to the latest CJS line (2.x). The 3.x ESM rewrite
-// ships a deep subpath import — `@actions/core/lib/oidc-utils.js` does
-// `import { BearerCredentialHandler } from '@actions/http-client/lib/auth'`
-// without a `.js` extension. Under strict ESM resolution, ncc/webpack
-// 0.44 can't resolve it statically and emits a runtime
-// `eval("require")(...)` fallback, which then crashes at runtime
-// inside the action with MODULE_NOT_FOUND (no node_modules ships
-// alongside dist/index.js). Neither the actions/toolkit team nor ncc
-// have shipped a fix for this; staying on 2.x is the safe option.
-//
-// @actions/github@^7 is the matching last CJS release. We don't use
-// any v3/v9-only API surface — only getInput, setOutput, setFailed,
-// info, debug, context, getOctokit, which are stable since v1.
+// The Actions toolkit v3/v9 lines are ESM. We only use APIs stable since
+// v1 (getInput, setOutput, setFailed, info, debug, context, getOctokit).
+// @octokit/types tracks the line @actions/github@9 ships (via
+// @octokit/plugin-rest-endpoint-methods@^17). See the overrides above for
+// the @actions/http-client resolution constraint these versions impose.
 project.deps.removeDependency('@actions/core');
 project.deps.removeDependency('@actions/github');
-project.deps.addDependency('@actions/core@^2.0.3', DependencyType.RUNTIME);
-project.deps.addDependency('@actions/github@^7.0.0', DependencyType.RUNTIME);
-// @octokit/types follows the line shipped by @actions/github@^7.
+project.deps.addDependency('@actions/core@^3.0.0', DependencyType.RUNTIME);
+project.deps.addDependency('@actions/github@^9.0.0', DependencyType.RUNTIME);
 project.deps.removeDependency('@octokit/types');
-project.deps.addDependency('@octokit/types@^12', DependencyType.RUNTIME);
+project.deps.addDependency('@octokit/types@^16', DependencyType.RUNTIME);
 
-applyTsconfigOverrides(project);
+new TsconfigOverrides(project);
 
-// Since tsc no longer emits lib/, point ncc at the TypeScript sources
-// directly. Two ncc passes — one per Action entrypoint. Source maps are
-// intentionally omitted: ncc embeds absolute filesystem paths into the
-// inline sourceMappingURL, which makes locally-built dist/ bytes differ
-// from CI-built dist/ bytes (the release task's
-// `git diff --exit-code` would then fail every time). The Action runtime
-// never consumes the maps, so dropping them costs nothing.
-project.packageTask.reset('ncc build --license licenses.txt src/index.ts -o dist');
-project.packageTask.exec('ncc build --license licenses.txt src/cleanup-entry.ts -o dist/cleanup');
+// tsup (esbuild) bundles the two Action entrypoints straight from the
+// TypeScript sources into single-file CJS — src/index.ts -> dist/index.js
+// and src/cleanup-entry.ts -> dist/cleanup/index.js (entry mapping lives in
+// tsup.config.ts). Source maps are disabled there: they embed absolute
+// filesystem paths, so enabling them would break the release task's
+// `git diff --exit-code` reproducibility guard, and the Action runtime
+// never consumes them.
+project.deps.removeDependency('@vercel/ncc');
+project.packageTask.reset('tsup');
 
-applyDoNotMergeGuard(project);
-addRepoSettings(project);
-addAiInstructions(project);
+new DoNotMergeGuard(project);
+new RepoSettings(project);
+new AiAssistantInstructions(project);
 
 new TextFile(project, '.nvmrc', {
   lines: [project.minNodeVersion ?? 'lts'],

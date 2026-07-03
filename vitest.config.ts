@@ -9,7 +9,7 @@ export default defineConfig({
       reporter: ['text', 'json', 'lcov', 'clover', 'cobertura'],
       reportsDirectory: 'coverage',
       include: ['src/**/*.ts'],
-      exclude: ['src/index.ts'],
+      exclude: ['src/index.ts', 'src/cleanup-entry.ts'],
     },
     reporters: ['default', ['junit', { outputFile: 'test-reports/junit.xml' }]],
   },

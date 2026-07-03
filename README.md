@@ -267,7 +267,7 @@ This repository is managed with [projen](https://github.com/projen/projen). **Do
 
 ### Build
 
-The build (`npx projen build`) compiles `src/index.ts` → `dist/index.js` and `src/cleanup-entry.ts` → `dist/cleanup/index.js` via [`@vercel/ncc`](https://github.com/vercel/ncc). Both bundles are committed so the action can be consumed directly from a git ref.
+The build (`npx projen build`) bundles `src/index.ts` → `dist/index.js` and `src/cleanup-entry.ts` → `dist/cleanup/index.js` via [`tsup`](https://tsup.egoist.dev/) (esbuild). Both bundles are committed so the action can be consumed directly from a git ref.
 
 ```sh
 $ npx projen build
