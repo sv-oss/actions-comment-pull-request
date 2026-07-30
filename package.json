@@ -4,6 +4,7 @@
   "scripts": {
     "build": "projen build",
     "bump": "projen bump",
+    "bump:releasable-commits": "projen bump:releasable-commits",
     "clobber": "projen clobber",
     "compile": "projen compile",
     "default": "projen default",
@@ -31,7 +32,7 @@
     "eslint": "^9",
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-import": "^2.32.0",
-    "projen": "^0.101.4",
+    "projen": "^0.101.17",
     "projen-github-action-typescript": "^0.0.514",
     "ts-node": "^10.9.2",
     "tsup": "^8.5.1",
@@ -51,7 +52,7 @@
     "esbuild": "^0.28.1"
   },
   "engines": {
-    "node": ">= 24.15.0"
+    "node": ">= 24.18.0"
   },
   "devEngines": {
     "packageManager": {

@@ -41,10 +41,32 @@
       },
       "steps": [
         {
-          "builtin": "release/bump-version"
+          "builtin": "release/resolve-latest-tag",
+          "outputEnv": "LATEST_TAG"
+        },
+        {
+          "spawn": "bump:releasable-commits",
+          "outputEnv": "RELEASABLE_COMMITS",
+          "condition": "git rev-parse --verify --quiet \"refs/tags/$LATEST_TAG\""
+        },
+        {
+          "builtin": "release/suggest-version-bump",
+          "outputEnv": "SUGGESTED_BUMP"
+        },
+        {
+          "builtin": "release/apply-version-bump"
         }
       ],
-      "condition": "git log --oneline -1 | grep -qv \"chore(release):\""
+      "condition": "git log --oneline -1 | grep -v \"chore(release):\" > /dev/null"
+    },
+    "bump:releasable-commits": {
+      "name": "bump:releasable-commits",
+      "description": "Print the releasable commits since the latest release",
+      "steps": [
+        {
+          "exec": "git log --oneline $LATEST_TAG..HEAD"
+        }
+      ]
     },
     "clobber": {
       "name": "clobber",
@@ -238,13 +260,45 @@
       },
       "steps": [
         {
-          "exec": "npx npm-check-updates@20 --upgrade --target=minor --cooldown=7 --peer --no-deprecated --dep=dev,peer,prod,optional --filter=eslint-import-resolver-typescript,eslint-plugin-import,projen,projen-github-action-typescript,ts-node,tsup,typescript"
+          "execArgs": [
+            "npx",
+            "npm-check-updates@20",
+            "--upgrade",
+            "--target=minor",
+            "--cooldown=7",
+            "--peer",
+            "--no-deprecated",
+            "--dep=dev,prod,peer,optional",
+            "--filter=eslint-import-resolver-typescript,eslint-plugin-import,projen,projen-github-action-typescript,ts-node,tsup,typescript"
+          ]
         },
         {
           "exec": "npm install"
         },
         {
-          "exec": "npm update @stylistic/eslint-plugin @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser @vitest/coverage-v8 commit-and-tag-version constructs eslint-import-resolver-typescript eslint-plugin-import eslint projen projen-github-action-typescript ts-node tsup typescript vitest @actions/core @actions/github @octokit/types"
+          "execArgs": [
+            "npm",
+            "update",
+            "@stylistic/eslint-plugin",
+            "@types/node",
+            "@typescript-eslint/eslint-plugin",
+            "@typescript-eslint/parser",
+            "@vitest/coverage-v8",
+            "commit-and-tag-version",
+            "constructs",
+            "eslint-import-resolver-typescript",
+            "eslint-plugin-import",
+            "eslint",
+            "projen",
+            "projen-github-action-typescript",
+            "ts-node",
+            "tsup",
+            "typescript",
+            "vitest",
+            "@actions/core",
+            "@actions/github",
+            "@octokit/types"
+          ]
         },
         {
           "exec": "npx projen"

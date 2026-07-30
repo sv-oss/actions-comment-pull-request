@@ -17,7 +17,7 @@ const project = new GitHubActionTypeScriptProject({
   description: 'GitHub action for commenting on a pull request (Service Victoria maintained fork of thollander/actions-comment-pull-request).',
   packageManager: javascript.NodePackageManager.NPM,
   projenrcTs: true,
-  minNodeVersion: '24.15.0',
+  minNodeVersion: '24.18.0',
   minMajorVersion: 4,
   license: 'MIT',
   copyrightOwner: 'Service Victoria',
