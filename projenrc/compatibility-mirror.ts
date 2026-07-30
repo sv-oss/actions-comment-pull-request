@@ -101,7 +101,7 @@ export class CompatibilityMirror extends Component {
             'git rm --ignore-unmatch .github/settings.yml',
             "awk 'NR == 1 { print; print \"\"; print \"> **Compatibility mirror.** This repository is retained for existing consumers. New workflows should use [sv-oss/actions-comment-pull-request](https://github.com/sv-oss/actions-comment-pull-request).\"; print \"\"; next } { print }' README.md > README.md.private",
             'mv README.md.private README.md',
-            'git add --all README.md .github/workflows .github/settings.yml',
+            'git add --all README.md .github/workflows',
             'git config user.name "compatibility-mirror[bot]"',
             'git config user.email "compatibility-mirror[bot]@users.noreply.github.com"',
             'git diff --cached --quiet || git commit --message "chore: apply private mirror overlay"',
