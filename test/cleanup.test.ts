@@ -30,7 +30,7 @@ import * as core from '@actions/core';
 import { run } from '../src/cleanup';
 
 const TAG = 'my-tag';
-const MARKER = `<!-- service-victoria/actions-comment-pull-request "${TAG}" -->`;
+const MARKER = `<!-- sv-oss/actions-comment-pull-request "${TAG}" -->`;
 
 beforeEach(() => {
   state.inputs = {};

@@ -30,7 +30,7 @@ export async function run() {
       return;
     }
 
-    const commentTagPattern = `<!-- service-victoria/actions-comment-pull-request "${commentTag}" -->`;
+    const commentTagPattern = `<!-- sv-oss/actions-comment-pull-request "${commentTag}" -->`;
 
     if (commentTagPattern) {
       type ListCommentsResponseDataType = GetResponseDataTypeFromEndpointMethod<
@@ -61,4 +61,3 @@ export async function run() {
     }
   }
 }
-

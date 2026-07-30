@@ -158,7 +158,7 @@ export async function run() {
       }
     }
 
-    const commentTagPattern = commentTag ? `<!-- service-victoria/actions-comment-pull-request "${commentTag}" -->` : null;
+    const commentTagPattern = commentTag ? `<!-- sv-oss/actions-comment-pull-request "${commentTag}" -->` : null;
     const body = commentTagPattern ? `${content}\n${commentTagPattern}` : content;
 
     if (commentTagPattern) {
@@ -249,4 +249,3 @@ export async function run() {
     }
   }
 }
-

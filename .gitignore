@@ -51,6 +51,8 @@ junit.xml
 dist/changelog.md
 dist/releasetag.txt
 dist/version.txt
+!/.github/workflows/notify-compatibility-mirror.yml
+!/.github/workflows/sync-from-canonical.yml
 !/.github/settings.yml
 !/.github/copilot-instructions.md
 !/.nvmrc

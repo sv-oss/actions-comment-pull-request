@@ -4,6 +4,7 @@ import { UpgradeDependenciesSchedule } from 'projen/lib/javascript';
 import { GitHubActionTypeScriptProject } from 'projen-github-action-typescript';
 import { actionMetadata } from './projenrc/action-metadata';
 import { AiAssistantInstructions } from './projenrc/ai-instructions';
+import { CompatibilityMirror } from './projenrc/compatibility-mirror';
 import { BOT_LOGIN, DEPS_UPGRADE_LABEL, ciAppCredentials } from './projenrc/constants';
 import { DoNotMergeGuard } from './projenrc/do-not-merge-guard';
 import { RepoSettings } from './projenrc/repo-settings';
@@ -137,6 +138,7 @@ project.deps.removeDependency('@vercel/ncc');
 project.packageTask.reset('tsup');
 
 new DoNotMergeGuard(project);
+new CompatibilityMirror(project);
 new RepoSettings(project);
 new AiAssistantInstructions(project);
 

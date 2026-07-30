@@ -35,7 +35,7 @@ import * as core from '@actions/core';
 import { run } from '../src/main';
 
 const TAG = 'my-tag';
-const MARKER = `<!-- service-victoria/actions-comment-pull-request "${TAG}" -->`;
+const MARKER = `<!-- sv-oss/actions-comment-pull-request "${TAG}" -->`;
 
 beforeEach(() => {
   state.inputs = {};
@@ -133,7 +133,7 @@ describe('creating without a comment-tag', () => {
 });
 
 describe('comment-tag body marker', () => {
-  it('appends the service-victoria marker to the body', async () => {
+  it('appends the sv-oss marker to the body', async () => {
     setInputs({ 'message': 'hello', 'comment-tag': TAG, 'create-if-not-exists': 'true' });
     await run();
     expect(state.octokit.rest.issues.createComment).toHaveBeenCalledWith(

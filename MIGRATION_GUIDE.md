@@ -1,6 +1,6 @@
 # Migration guide
 
-## From `thollander/actions-comment-pull-request@v3` to `service-victoria/actions-comment-pull-request@v4`
+## From `thollander/actions-comment-pull-request@v3` to `sv-oss/actions-comment-pull-request@v4`
 
 Drop-in compatible **except** for one behavioural change:
 
@@ -9,7 +9,7 @@ Drop-in compatible **except** for one behavioural change:
 The HTML marker used to identify a comment for upsert/delete via the `comment-tag` input changed:
 
 - **Old:** `<!-- thollander/actions-comment-pull-request "your-tag" -->`
-- **New:** `<!-- service-victoria/actions-comment-pull-request "your-tag" -->`
+- **New:** `<!-- sv-oss/actions-comment-pull-request "your-tag" -->`
 
 This means PR comments previously created by the upstream `thollander` action will **not** be found by this fork — `mode: upsert` will create a new comment alongside the old one, and `mode: delete` / `delete-on-completion` will not delete the old one.
 
@@ -26,7 +26,7 @@ uses: thollander/actions-comment-pull-request@v3
 with:
 
 ```yaml
-uses: service-victoria/actions-comment-pull-request@v4
+uses: sv-oss/actions-comment-pull-request@v4
 ```
 
 ### Runtime

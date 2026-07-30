@@ -23575,7 +23575,7 @@ async function run() {
         throw error2;
       }
     }
-    const commentTagPattern = commentTag ? `<!-- service-victoria/actions-comment-pull-request "${commentTag}" -->` : null;
+    const commentTagPattern = commentTag ? `<!-- sv-oss/actions-comment-pull-request "${commentTag}" -->` : null;
     const body = commentTagPattern ? `${content}
 ${commentTagPattern}` : content;
     if (commentTagPattern) {

@@ -23456,7 +23456,7 @@ async function run() {
       setFailed("No issue/pull request in input neither in current context.");
       return;
     }
-    const commentTagPattern = `<!-- service-victoria/actions-comment-pull-request "${commentTag}" -->`;
+    const commentTagPattern = `<!-- sv-oss/actions-comment-pull-request "${commentTag}" -->`;
     if (commentTagPattern) {
       for await (const { data: comments } of octokit.paginate.iterator(octokit.rest.issues.listComments, {
         ...context3.repo,

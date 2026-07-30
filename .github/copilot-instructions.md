@@ -58,7 +58,7 @@ Build with `npx projen build` (runs synth, tsc type-check, vitest, eslint, tsup 
 
 TypeScript is configured with `module: ESNext` + `moduleResolution: Bundler` + `noEmit: true` for the production sources, because `@actions/core@^3` and `@actions/github@^9` are ESM-only. `tsc` only type-checks; `tsup` (esbuild) bundles `src/index.ts` and `src/cleanup-entry.ts` directly to CJS (config in `tsup.config.ts`).
 
-When upserting/deleting PR comments, the HTML marker is `<!-- service-victoria/actions-comment-pull-request "tag" -->`. The old upstream marker (`thollander/...`) is intentionally NOT matched — this is a deliberate clean break.
+When upserting/deleting PR comments, the HTML marker is `<!-- sv-oss/actions-comment-pull-request "tag" -->`. The old upstream marker (`thollander/...`) is intentionally NOT matched — this is a deliberate clean break.
 
 Auto-merge for dependency upgrade PRs uses the native projen merge queue (`.github/workflows/auto-queue.yml`), not Mergify. The branch protection rule on `main` is declared in `.github/settings.yml` and synced by the probot/settings GitHub App.
 
