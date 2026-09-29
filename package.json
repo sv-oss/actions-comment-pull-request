@@ -45,7 +45,7 @@
     "@octokit/types": "^16"
   },
   "overrides": {
-    "undici": "^6.27.0",
+    "undici": "^6.29.0",
     "fast-xml-parser": "^5.9.3",
     "fast-xml-builder": "^1.2.0",
     "js-yaml": "^4.2.0",
