@@ -15,6 +15,7 @@ jobs:
     if: github.repository == 'sv-oss/actions-comment-pull-request'
     steps:
       - name: Request mirror update
+        id: request_mirror_update
         env:
           TOKEN: ${{ secrets.SERVICE_VICTORIA_DISPATCH_TOKEN }}
         run: |-
